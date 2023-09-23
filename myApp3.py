@@ -9,8 +9,10 @@ pygame.init()
 
 # Window parameters
 width, height = 800, 600
+
 window = pygame.display.set_mode((width, height))
 pygame.display.set_caption("Convex hull")
+
 
 # Points Parameters
 n = 5  # Number of points
@@ -49,12 +51,31 @@ def slow_delaunay2(points):
     return triangulation
 '''
 
-
 def slow_delaunay(points):
     triangulation = naive_triangulation(points)
     triangulation = triangulation.add_neighbors()
-    n = len(triangulation.triangles)
-    for i in range(n):
+    triangle_list = triangulation.triangles.copy()
+    while len(triangle_list) != 0:
+        triangle:classes.Triangle = triangle_list[0]
+        neighbors = triangle.get_neighbors()
+        flip = False
+        for neighbour in neighbors:
+            triangulation, flip = triangulation.lawson_flip(triangle, neighbour)
+            if flip:
+                triangle_list = triangulation.triangles.copy()
+                break
+        if not flip:
+            triangle_list.pop(0)
+
+    return triangulation
+        
+
+
+
+def slow_delaunay2(points):
+    triangulation = naive_triangulation(points)
+    triangulation = triangulation.add_neighbors()
+    for i in range(len(triangulation.triangles)):
         queue = [i]
         while len(queue) > 0:
             triangulation.print()
@@ -133,6 +154,7 @@ triangulation = classes.Triangulation([t1, t2, t3])
 '''
 triangulation = slow_delaunay(points)
 # Main loop
+
 running = True
 while running:
     for event in pygame.event.get():
@@ -146,6 +168,9 @@ while running:
 
     for point in points:
         pygame.draw.circle(window, "black", (point.x, point.y), radius_point)
+
+
+#########
     '''
     pygame.draw.circle(window, "black", (200, 200), 2)
     pygame.draw.circle(window, "black", (600, 200), 2)
@@ -153,11 +178,15 @@ while running:
     pygame.draw.circle(window, "black", (400, 100), 2)
     #triangulation.draw(window)
     '''
+#########
+
+
 
     triangulation.draw(window)
 
     # Update the display
     pygame.display.flip()
+
 
 # Quit Pygame
 pygame.quit()

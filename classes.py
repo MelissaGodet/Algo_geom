@@ -132,9 +132,9 @@ class Triangle:
         self.p1 = p1
         self.p2 = p2
         self.p3 = p3
-        self.n1_index = None
-        self.n2_index = None
-        self.n3_index = None
+        self.n1 = None
+        self.n2 = None
+        self.n3 = None
 
     def __eq__(self, other):
         if isinstance(other, Triangle):
@@ -146,14 +146,27 @@ class Triangle:
                 (self.p1 == other.p3 and self.p2 == other.p2 and self.p3 == other.p1)
         return False
 
-    def add_a_neighbor1(self, t):
-        self.n1_index = t
+    def get_neighbors(self):
+        return [self.n1, self.n2, self.n3]
 
-    def add_a_neighbor2(self, t):
-        self.n2_index = t
+    def add_a_neighbour1(self, t):
+        self.n1 = t
 
-    def add_a_neighbor3(self, t):
-        self.n3_index = t
+    def add_a_neighbour2(self, t):
+        self.n2 = t
+
+    def add_a_neighbour3(self, t):
+        self.n3 = t
+
+    def add_a_neighbour(self, t):
+        if self.n1 is None:
+            self.add_a_neighbour1(t)
+        elif self.n2 is None:
+            self.add_a_neighbour2(t)
+        elif self.n3 is None:
+            self.add_a_neighbour3(t)
+        else:
+            raise ValueError("All the neighbors are already defined")
 
     def contains(self, p):
         contains = False
@@ -171,11 +184,13 @@ class Triangle:
 
         v = Point(self.p2.y - self.p1.y, self.p1.x - self.p2.x)
         w = Point(self.p3.y - self.p2.y, self.p2.x - self.p3.x)
-
-        det = v.x * w.y - v.y * w.x
+        self.print()
+        v.print()
+        w.print()
+        det = v.x * w.y - v.y * w.x # v(1,2) w(4,8)
         delta_x = m2.x - m1.x
         delta_y = m2.y - m1.y
-
+        print(str(det)+' '+str(delta_x)+' '+str(delta_y))
         t = (delta_x * w.y - delta_y * w.x) / det
 
         center_x = m1.x + t * v.x
@@ -192,25 +207,33 @@ class Triangle:
             is_inside_the_circle = True
         return is_inside_the_circle
 
-    def print(self):
+    def print(self, is_original_triangle:bool = True):
         print("p1 : (" + str(self.p1.x) + ", " + str(self.p1.y) + ")\n")
         print("p2 : (" + str(self.p2.x) + ", " + str(self.p2.y) + ")\n")
         print("p3 : (" + str(self.p3.x) + ", " + str(self.p3.y) + ")\n")
-        if self.n1_index is not None:
-            print("1st neighbor has the index : " + str(self.n1_index))
-        if self.n2_index is not None:
-            print("2nd neighbor has the index : " + str(self.n2_index))
-        if self.n3_index is not None:
-            print("3rd neighbor has the index : " + str(self.n3_index))
+        if self.n1 is not None and is_original_triangle:
+            print("1st neighbor is : ")
+            self.n1.print(False)
+        if self.n2 is not None and is_original_triangle:
+            print("2nd neighbor is : ")
+            self.n2.print(False)
+        if self.n3 is not None and is_original_triangle:
+            print("3rd neighbor is : ")
+            self.n3.print(False)
 
     def draw(self, window):
         pygame.draw.line(window, (0, 0, 0), (self.p1.x, self.p1.y), (self.p2.x, self.p2.y), 2)
         pygame.draw.line(window, (0, 0, 0), (self.p2.x, self.p2.y), (self.p3.x, self.p3.y), 2)
         pygame.draw.line(window, (0, 0, 0), (self.p3.x, self.p3.y), (self.p1.x, self.p1.y), 2)
 
+def intersection(list1, list2):
+    return [value for value in list1 if value in list2]
+
+def difference(list1, list2):
+    return [value for value in list1 if value not in list2] + [value for value in list2 if value not in list1]
 
 class Triangulation:
-    def __init__(self, triangles):
+    def __init__(self, triangles: list):
         self.triangles = triangles
 
     def who_contains(self, p):
@@ -221,25 +244,54 @@ class Triangulation:
         while not triangle_founded and i < n:
             triangle_founded = self.triangles[i].contains(p)
             if triangle_founded:
-                right_triangle = i
+                right_triangle = self.triangles[i]
             i += 1
+
+        if right_triangle is None:
+            raise ValueError("The point must be inside the triangulation")
         return right_triangle
+    
+    def remove_triangle(self, t: Triangle):
+        for i in len(self.triangles):
+            if self.triangles[i] == t:
+                self.triangles.pop(i)
+                break
 
-    def insert_a_point(self, p):
-        n = len(self.triangles)
-        right_triangle_index = self.who_contains(p)
-        if right_triangle_index is not None:
-            right_triangle = self.triangles[right_triangle_index]
-            t1 = Triangle(p, right_triangle.p1, right_triangle.p2)
-            t2 = Triangle(p, right_triangle.p2, right_triangle.p3)
-            t3 = Triangle(p, right_triangle.p3, right_triangle.p1)
-            self.triangles.append(t1)
-            self.triangles.append(t2)
-            self.triangles.append(t3)
-            self.triangles.pop(right_triangle_index)
+    def insert_a_point(self, p: Point):
+        right_triangle = self.who_contains(p)
+        t1 = Triangle(p, right_triangle.p1, right_triangle.p2)
+        t2 = Triangle(p, right_triangle.p2, right_triangle.p3)
+        t3 = Triangle(p, right_triangle.p3, right_triangle.p1)
+        self.triangles.append(t1)
+        self.triangles.append(t2)
+        self.triangles.append(t3)
+        self.remove_triangle(right_triangle)
         return self
+    
+    def lawson_flip(self, t1: Triangle, t2: Triangle):
+        flip = False
+        l1 = [t1.p1, t1.p2, t1.p3]
+        l2 = [t2.p1, t2.p2, t2.p3]
+        common_points = intersection(l1, l2)
+        opposite_points = difference(l1, l2)
+        neighbors = difference([t1.n1, t1.n2, t1.n3, t2.n1, t2.n2, t2.n3], [t1, t2])
+        flip = t1.delaunay_test(opposite_points[1]) or t2.delaunay_test(opposite_points[0])
+        if flip:
+            self.remove_triangle(t1)
+            self.remove_triangle(t2)
+            new_t1 = Triangle(common_points[0], opposite_points[0], opposite_points[1])
+            new_t2 = Triangle(common_points[1], opposite_points[0], opposite_points[1])
+            self.update_neighbors(new_t1)
+            self.update_neighbors(new_t2)
+            new_t1.add_a_neighbour(new_t2)
+            new_t2.add_a_neighbour(new_t1)
+            self.triangles.append(new_t1)
+            self.triangles.append(new_t2)
+            for neighbour in neighbors:
+                self.update_neighbors(neighbour)
+        return self, flip
 
-    def lawson_flip(self, t1_index, t2_index):
+    def lawson_flip2(self, t1_index, t2_index):
         flip = False
         t1 = self.triangles[t1_index]
         t2 = self.triangles[t2_index]
@@ -343,101 +395,48 @@ class Triangulation:
             print("Triangle :" + str(i))
             t.print()
 
-    def is_neighbors(self, i, j):
-        is_neighbors = False
-        tri_i = self.triangles[i]
-        tri_j = self.triangles[j]
-        tri_i_points = [tri_i.p1, tri_i.p2, tri_i.p3]
-        tri_j_points = [tri_j.p1, tri_j.p2, tri_j.p3]
-        if (tri_i_points[0] in tri_j_points and tri_i_points[1] in tri_j_points and tri_i_points[2] not in tri_j_points) or (tri_i_points[0] in tri_j_points and tri_i_points[2] in tri_j_points and tri_i_points[1] not in tri_j_points) or (tri_i_points[2] in tri_j_points and tri_i_points[1] in tri_j_points and tri_i_points[0] not in tri_j_points):
-            is_neighbors = True
-        return is_neighbors
+    def is_neighbour(self, t1: Triangle, t2: Triangle):
+        is_neighbour = False
+        t1_points = [t1.p1, t1.p2, t1.p3]
+        t2_points = [t2.p1, t2.p2, t2.p3]
+        if len(intersection(t1_points, t2_points)) == 2:
+            is_neighbour = True
+        return is_neighbour
 
-    def update_neighbors(self, ind):
-        tri = self.triangles[ind]
-        n = len(self.triangles)
+    def update_neighbors(self, t: Triangle):
         c = 0
-        for i in range(n):
-            if self.is_neighbors(ind, i):
+        for triangle in self.triangles:
+            if self.is_neighbour(t, triangle):
                 c += 1
                 if c == 1:
-                    tri.add_a_neighbor1(i)
+                    t.add_a_neighbour1(triangle)
                 if c == 2:
-                    tri.add_a_neighbor2(i)
+                    t.add_a_neighbour2(triangle)
                 if c == 3:
-                    tri.add_a_neighbor3(i)
-        for i in range(c, 3):
-            if c == 1:
-                tri.add_a_neighbor1 = None
-            if c == 2:
-                tri.add_a_neighbor2 = None
-            if c == 3:
-                tri.add_a_neighbor3 = None
-
-
-
-
-
+                    t.add_a_neighbour3(triangle)
+        if c == 1:
+            t.add_a_neighbour2 = None
+            t.add_a_neighbour3 = None
+        if c == 2:
+            t.add_a_neighbour3 = None
 
     def add_neighbors(self):
-        n = len(self.triangles)
         for t1 in self.triangles:
-            for i in range(n):
-                t2 = self.triangles[i]
+            for t2 in self.triangles:
                 l1 = [t1.p1, t1.p2, t1.p3]
                 l2 = [t2.p1, t2.p2, t2.p3]
-                if (l1[0] in l2 and l1[1] in l2 and l1[2] not in l2) or (l1[0] in l2 and l1[2] in l2 and l1[1] not in l2) or (l1[2] in l2 and l1[1] in l2 and l1[0] not in l2):
-                    if t1.n1_index is None:
-                        t1.n1_index = i
-                    elif t1.n2_index is None:
-                        t1.n2_index = i
+                if len(intersection(l1, l2)) == 2:
+                    if t1.n1 is None:
+                        t1.n1 = t2
+                    elif t1.n2 is None:
+                        t1.n2 = t2
                     else:
-                        t1.n3_index = i
+                        t1.n3 = t2
         return self
 
     def draw(self, window):
         for t in self.triangles:
             t.draw(window)
-
-
-    def recursive_lawson_flip(self, i):
-        n = 3
-        triangulation = self
-        l = [self.triangles[i].n1_index, self.triangles[i].n2_index, self.triangles[i].n3_index]
-        for k in range(n):
-            if l[k] is not None:
-                triangulation, flip = self.lawson_flip(i, l[k])
-                if flip:
-                    l1 = [self.triangles[i].n1_index, self.triangles[i].n2_index, self.triangles[i].n3_index]
-                    l2 = [self.triangles[l[k]].n1_index, self.triangles[l[k]].n2_index, self.triangles[l[k]].n3_index]
-                    for j in range(n):
-                        if l1[j] is not None and l1[j] not in l2:
-                            triangulation = triangulation.recursive_lawson_flip(l1[j])
-                        if l2[j] is not None and l2[j] not in l1:
-                            triangulation = triangulation.recursive_lawson_flip(l2[j])
-        return triangulation
-
-
-'''
-        flip1, flip2, flip3 = False, False, False
-        triangulation = self
-        i1, i2, i3 = self.triangles[i].n1_index, self.triangles[i].n2_index, self.triangles[i].n3_index
-        if i1 is not None:
-            triangulation, flip1 = self.lawson_flip(i, i1)
-            if not flip1:
-                triangulation = triangulation.recursive_lawson_flip(i1)
-        if i2 is not None:
-            triangulation, flip2 = triangulation.lawson_flip(i, i2)
-            if not flip2:
-                triangulation = triangulation.recursive_lawson_flip(i2)
-        if i3 is not None:
-            triangulation, flip3 = triangulation.lawson_flip(i, i3)
-            if not flip3:
-                triangulation = triangulation.recursive_lawson_flip(i3)
-
-        if not flip1 and not flip2 and not flip3:
-            return triangulation
-'''
 
 
 def angle(p, current_point):
@@ -483,7 +482,18 @@ def graham_scan_without_drawing(points):
 
 t1 = Triangle(Point(0, 0), Point(4, 0), Point(2, 2))
 t2 = Triangle(Point(0, 0), Point(4, 0), Point(2, -1))
-triangulation1 = Triangulation([t1])
+triangulation1 = Triangulation([t1,t2])
+triangulation1 = triangulation1.add_neighbors()
+triangulation1.print()
+print("====")
+t3 = Triangle(Point(0, 0), Point(4, 4), Point(2, -1))
+triangulation1.update_neighbors(t3)
+t3.print()
+print("====")
+triangulation1.triangles.append(t3)
+triangulation1.update_neighbors(t2)
+triangulation1.print()
+'''
 p = Point(0, 3)
 b = triangulation1.who_contains(p)
 print("who : " + str(b))
@@ -495,3 +505,4 @@ triangulation2 = Triangulation([t1, t2])
 triangulation2.print()
 triangulation3 = triangulation2.lawson_flip(0, 1)
 triangulation3[0].print()
+'''
