@@ -56,7 +56,7 @@ class Polygon:
     def draw(self, window, color):
         for segment in self.segments:
             pygame.draw.line(window, color, (segment.point1.x, segment.point1.y),
-                             (segment.point2.x, segment.point2.y), 2)
+                             (segment.point2.x, segment.point2.y), 1)
 
     def color(self):
         n = len(self.segments)
@@ -118,12 +118,15 @@ class Polygon:
             color = "yellow"
         return color
 
-    def triangulation(self):
+    def triangulation(self, window, color):
         lt = []
         n = len(self.segments)
         for i in range(2, n - 1):
             t = Triangle(self.segments[0].point1, self.segments[i].point1, self.segments[i].point2)
+            t.draw(window, color)
             lt.append(t)
+            pygame.display.flip()
+            pygame.time.delay(500)  # Delay to slow down the animation
         return Triangulation(lt)
 
 
@@ -234,10 +237,10 @@ class Triangle:
             print("3rd neighbor is : ")
             self.n3.print(False)
 
-    def draw(self, window):
-        pygame.draw.line(window, (0, 0, 0), (self.p1.x, self.p1.y), (self.p2.x, self.p2.y), 4)
-        pygame.draw.line(window, (0, 0, 0), (self.p2.x, self.p2.y), (self.p3.x, self.p3.y), 4)
-        pygame.draw.line(window, (0, 0, 0), (self.p3.x, self.p3.y), (self.p1.x, self.p1.y), 4)
+    def draw(self, window, color):
+        pygame.draw.line(window, color, (self.p1.x, self.p1.y), (self.p2.x, self.p2.y), 1)
+        pygame.draw.line(window, color, (self.p2.x, self.p2.y), (self.p3.x, self.p3.y), 1)
+        pygame.draw.line(window, color, (self.p3.x, self.p3.y), (self.p1.x, self.p1.y), 1)
 
 
 def intersection(list1, list2):
@@ -263,30 +266,9 @@ class Triangulation:
                 right_triangle = self.triangles[i]
             i += 1
 
-
-
         if right_triangle is None:
             raise ValueError("The point must be inside the triangulation")
         return right_triangle
-    '''
-    def who_contains2(self, p):
-        right_triangles = []
-        n = len(self.triangles)
-        for t in self.triangles:
-            if t.contains(p):
-                right_triangles.append(t)
-        if len(right_triangles) > 0:
-            right_triangle = right_triangles[0]
-            min_area = right_triangle.area()
-            for t in right_triangles:
-                if t.area() < min_area:
-                    right_triangle = t
-                    min_area = t.area
-            return right_triangle
-        else:
-            return None
-    '''
-
 
     def remove_triangle(self, t: Triangle):
         for i in range(len(self.triangles)):
@@ -323,12 +305,12 @@ class Triangulation:
         t3 = Triangle(p, right_triangle.p3, right_triangle.p1)
         neighbors = right_triangle.get_neighbors()
         self.remove_triangle(right_triangle)
-        self.update_neighbors(t1)
-        self.update_neighbors(t2)
-        self.update_neighbors(t3)
         self.triangles.append(t1)
         self.triangles.append(t2)
         self.triangles.append(t3)
+        self.update_neighbors(t1)
+        self.update_neighbors(t2)
+        self.update_neighbors(t3)
         for neighbour in neighbors:
             self.update_neighbors(neighbour)
         return self, [t1, t2, t3]
@@ -348,10 +330,6 @@ class Triangulation:
             new_t2 = Triangle(common_points[1], opposite_points[0], opposite_points[1])
             self.update_neighbors(new_t1)
             self.update_neighbors(new_t2)
-            print("NEW T1: ")
-            new_t1.print()
-            print("NEW T2: ")
-            new_t2.print()
             new_t1.add_a_neighbour(new_t2)
             new_t2.add_a_neighbour(new_t1)
             self.triangles.append(new_t1)
@@ -361,7 +339,7 @@ class Triangulation:
                     self.update_neighbors(neighbour)
         return self, flip
 
-    def rec_lawson_flip(self, t1:Triangle, t2:Triangle):
+    def rec_lawson_flip(self, t1: Triangle, t2: Triangle):
         triangulation, flip = self.lawson_flip(t1, t2)
         neighbors = t2.get_neighbors()
         if flip:
@@ -436,10 +414,17 @@ class Triangulation:
                         t1.n3 = t2
         return self
 
-    def draw(self, window):
+    def draw(self, window, color):
         for t in self.triangles:
-            t.draw(window)
+            t.draw(window, color)
 
+
+class Voronoi:
+    def __init__(self, triangulation: Triangulation):
+        self.triangulation = triangulation
+
+    def draw(self, window, color):
+        self.triangulation.draw(window, color)
 
 
 def angle(p, current_point):
@@ -482,11 +467,17 @@ def graham_scan_without_drawing(points):
 
     return convex_hull
 
-'''
+
 t1 = Triangle(Point(0, 0), Point(4, 0), Point(2, 2))
 t2 = Triangle(Point(0, 0), Point(4, 0), Point(2, -1))
 triangulation1 = Triangulation([t1, t2])
-p = Point(0, 3)
+triangulation1.add_neighbors()
+p = Point(1, 1)
+p2 = Point(1.5, 1.5)
+triangulation1.insert_a_point2(p)
+triangulation1.insert_a_point2(p2)
+triangulation1.print()
+'''
 b = triangulation1.who_contains(p)
 print("who : " + str(b))
 radius = t1.circumcenter()
