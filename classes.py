@@ -331,7 +331,7 @@ class Triangulation:
         self.triangles.append(t3)
         for neighbour in neighbors:
             self.update_neighbors(neighbour)
-        return self, [t1, t2, t2]
+        return self, [t1, t2, t3]
 
     def lawson_flip(self, t1: Triangle, t2: Triangle):
         flip = False

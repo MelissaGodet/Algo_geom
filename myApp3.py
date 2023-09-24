@@ -16,7 +16,7 @@ window = pygame.display.set_mode((width, height))
 pygame.display.set_caption("Convex hull")
 
 # Points Parameters
-n = 5  # Number of points
+n = 10  # Number of points
 radius_point = 3  # Radius for the points
 
 
